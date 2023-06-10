@@ -9,8 +9,36 @@ class DataBase:
 				host = host,
 				database = database
 			)
+		self.database = database
 		self.cur = self.db.cursor()
 
+
+	def sort_data(self, arg, types, table):
+		request = f"SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA`='{self.database}' AND `TABLE_NAME`='{table}';"
+		self.cur.execute(request)
+		self.db.commit()
+		COLUMN_NAME = self.cur.fetchall()
+
+		sorted_name = []
+		for i in COLUMN_NAME:
+			sorted_name.append(i[0])
+
+		if types == "one":
+			json_resp = {}
+			for i in range(len(arg)):
+				json_resp[sorted_name[i]] = arg[i]
+
+			return json_resp
+
+		elif types == "many" or types == "all":
+			arg_resp = []
+			for i in range(len(arg)):
+				json_resp = {}
+				for item in range(len(arg[i])):
+					json_resp[sorted_name[item]] = arg[i][item]
+				arg_resp.append(json_resp)
+
+			return arg_resp
 
 
 	def insert_into(self, dict_):
@@ -79,7 +107,8 @@ class DataBase:
 			self.db.commit()
 
 			resp = self.cur.fetchall()
-			return resp
+			json_resp = self.sort_data(resp, types, table)
+			return json_resp
 
 		else:
 			keys = list(dict_.keys())
@@ -96,10 +125,13 @@ class DataBase:
 
 			if types == "one":
 				resp = self.cur.fetchone()
+				json_resp = self.sort_data(resp, types, table)
+
 			elif types == "many":
 				resp = self.cur.fetchall()
+				json_resp = self.sort_data(resp, types, table)
 
-			return resp
+			return json_resp
 
 
 	def update(self, dict_):
